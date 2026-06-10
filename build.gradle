@@ -1,0 +1,32 @@
+plugins {
+    id 'war'
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    providedCompile  'jakarta.servlet:jakarta.servlet-api:6.1.0'
+
+    compileOnly 'org.eclipse.jetty.ee11:jetty-ee11-webapp:12.1.5'
+    compileOnly 'org.eclipse.jetty.ee11:jetty-ee11-annotations:12.1.5'
+    compileOnly 'org.eclipse.jetty:jetty-server:12.1.5'
+}
+
+war {
+    archiveFileName = 'FinanceBudge.war'
+}
+
+tasks.register('copyWars', Copy) {
+    dependsOn war
+    from war.archiveFile
+    into "webapps/"
+}
+
+tasks.register('startJetty', Exec) {
+    dependsOn copyWars
+    commandLine 'java', '-jar', "${System.env.JETTY_HOME}/start.jar",
+            "jetty.base=."
+}
