@@ -21,5 +21,5 @@
     ```bash
     ./gradlew startJetty
     ```
-  
+
 startJetty depends on copyWars, which in turn depends on war. So you can just execute startJetty if you just need to compile the web application.
