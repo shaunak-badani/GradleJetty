@@ -5,6 +5,22 @@
 
 ### Initialization
 
-```bash
-java -jar $JETTY_HOME/start.jar jetty.base=. --add-module=server,http,ee11-annotations,ee11-jsp
-```
+- Build war file
+
+    ```bash
+    ./gradlew war
+    ```
+
+- Copy war file to web app
+
+    ```bash
+    ./gradlew copyWars
+    ```
+- Start jetty
+
+    ```bash
+    ./gradlew startJetty
+    ```
+  
+
+startJetty depends on copyWars, which in turn depends on war. So you can just execute startJetty if you just need to compile the web application.
