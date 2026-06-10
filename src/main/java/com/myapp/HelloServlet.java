@@ -13,5 +13,6 @@ public class HelloServlet extends HttpServlet {
             throws IOException {
         response.setContentType("text/html");
         response.getWriter().println("<h1>Hello from Gradle + Jetty!</h1>");
+        response.getWriter().println("<p>Testing out some stuff</p>");
     }
 }
