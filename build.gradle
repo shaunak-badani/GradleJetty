@@ -13,6 +13,13 @@ dependencies {
     compileOnly 'org.eclipse.jetty.ee11:jetty-ee11-webapp:12.1.5'
     compileOnly 'org.eclipse.jetty.ee11:jetty-ee11-annotations:12.1.5'
     compileOnly 'org.eclipse.jetty:jetty-server:12.1.5'
+
+    // OpenSearch Java client + its HTTP transport and JSON mapper.
+    // These need to ship inside the WAR (WEB-INF/lib), unlike the Jetty/servlet
+    // deps above which are provided by the Jetty distribution at runtime.
+    implementation 'org.opensearch.client:opensearch-java:2.25.0'
+    implementation 'org.apache.httpcomponents.client5:httpclient5:5.5.2'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.4'
 }
 
 war {
