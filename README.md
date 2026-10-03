@@ -23,3 +23,5 @@
     ```
 
 startJetty depends on copyWars, which in turn depends on war. So you can just execute startJetty if you just need to compile the web application.
+
+Then you can find the files being served at `http://localhost:8080/FinanceBudge/hello`.
