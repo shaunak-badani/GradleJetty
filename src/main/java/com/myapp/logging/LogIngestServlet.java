@@ -5,20 +5,17 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.opensearch.client.opensearch.OpenSearchClient;
-import org.opensearch.client.opensearch.core.IndexResponse;
 
 import java.io.IOException;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * POST /logs
  * Body:  {"level": "INFO", "message": "something happened", "source": "checkout-service"}
  *
- * Does two things with every log entry, to show both halves of the pipeline:
- *   1. Appends it as a JSON line to logs/application.log (the "log file on disk").
- *   2. Indexes the same entry into OpenSearch, index "app-logs" (the "searchable copy").
+ * Only writes to logs/application.log. Getting entries into OpenSearch is no longer
+ * this servlet's job - Logstash tails that file and ships new lines into the
+ * "app-logs" index (see logstash/app-logs.conf). This mirrors a real deployment:
+ * the app only ever produces its log file, something else ingests it.
  */
 @WebServlet("/logs")
 public class LogIngestServlet extends HttpServlet {
@@ -32,16 +29,7 @@ public class LogIngestServlet extends HttpServlet {
 
         LogFileWriter.append(entry);
 
-        OpenSearchClient client = OpenSearchClientProvider.getClient();
-        IndexResponse indexResponse = client.index(b -> b
-                .index("app-logs")
-                .document(entry));
-
-        Map<String, String> result = new LinkedHashMap<>();
-        result.put("id", indexResponse.id());
-        result.put("result", indexResponse.result().jsonValue());
-
         response.setContentType("application/json");
-        response.getWriter().println(MAPPER.writeValueAsString(result));
+        response.getWriter().println(MAPPER.writeValueAsString(entry));
     }
 }

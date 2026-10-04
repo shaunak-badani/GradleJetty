@@ -49,10 +49,19 @@ Start Jetty Server :
 ```
 
 Then navigate to `http://localhost:8080/FinanceBudge/console`.
-This is a page for demo-ing opensearch.
+This is a page for demo-ing opensearch. 
+
+Before pushing a log in the log file, start the logstash server:
+```bash
+docker run  --name logstash-dev   --network host   -v /home/shaunak/NetSuite/Applications/GradleJetty/logs:/home/shaunak/NetSuite/Applications/GradleJetty/logs   -v /home/shaunak/NetSuite/Applications/GradleJetty/logstash/app-logs.conf:/usr/share/logstash/pipeline/logstash.conf   opensearchproject/logstash-oss-with-opensearch-output-plugin:latest
+```
+
+When a POST query with log is executed:
+    - The log file is appended to.
+    - Logstash notes this new file (tails every few seconds) and then adds these lines to the OpenSearch index.
+    - OpenSearch notes this log and adds it to the index.
 
 You can write a log entry to an opensearch console, and then query the opensearch using the search box in "Search Logs".
 
 It queries the message part of the logs.
 
-This is a simpler version where the POST endpoint for logs is appending to file AND adding an index to OpenSearch. In the real world scenario, you have LogStash tail a log file and create indices for you.

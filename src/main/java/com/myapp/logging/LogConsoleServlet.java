@@ -51,7 +51,7 @@ public class LogConsoleServlet extends HttpServlet {
             </head>
             <body>
             <h1>FinanceBudge Log Console</h1>
-            <p>Writes to logs/application.log and indexes into OpenSearch ("app-logs").</p>
+            <p>Writes to logs/application.log. Logstash tails that file and ships new entries into OpenSearch ("app-logs") so they show up in the search below.</p>
 
             <section>
                 <h2>Write a log entry &rarr; POST /logs</h2>
@@ -120,7 +120,7 @@ public class LogConsoleServlet extends HttpServlet {
                         });
                         const text = await resp.text();
                         if (!resp.ok) throw new Error('HTTP ' + resp.status + ': ' + text);
-                        showStatus(logStatus, 'Indexed OK -> ' + text.trim(), false);
+                        showStatus(logStatus, 'Written to log file -> ' + text.trim() + ' (Logstash will index it shortly)', false);
                         document.getElementById('message').value = '';
                     } catch (err) {
                         showStatus(logStatus, 'Failed to submit log: ' + err.message, true);
