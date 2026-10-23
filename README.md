@@ -65,3 +65,63 @@ You can write a log entry to an opensearch console, and then query the opensearc
 
 It queries the message part of the logs.
 
+## Kafka
+
+Start a local Kafka broker (official image, KRaft mode, no Zookeeper needed):
+```bash
+docker run -d --name kafka-dev -p 9092:9092 apache/kafka:3.9.0
+```
+Test it's up:
+```bash
+docker exec kafka-dev /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+```
+
+Start Jetty Server:
+```bash
+./gradlew startJetty
+```
+
+Then navigate to `http://localhost:8080/FinanceBudge/kafka/console`.
+This is a page for demo-ing Kafka.
+
+When the webapp deploys, `KafkaLifecycleListener` starts a background consumer thread (`KafkaConsumerService`)
+subscribed to the `app-events` topic. When you submit the "Produce" form:
+- The page POSTs to `/kafka/produce`, which sends the key/value as one record to the `app-events` topic on the broker.
+- The broker assigns it a partition and offset and returns those to the page immediately (that's "sent").
+- Completely separately, the background consumer thread polls the broker, picks up the record, and buffers it in memory.
+- The page polls `/kafka/messages` every 2s and shows whatever the consumer has buffered so far (that's "consumed").
+
+The point of the demo: the producer and consumer never call each other directly, only the broker. You can override
+the broker address/topic with the `KAFKA_BOOTSTRAP_SERVERS` / `KAFKA_TOPIC` env vars (see `KafkaConfig`).
+
+## Cassandra
+
+Start a local single-node Cassandra:
+```bash
+docker run -d --name cassandra-dev -p 9042:9042 cassandra:5.0
+```
+Cassandra takes 30-60s to finish booting before the CQL port is ready. Test it's up:
+```bash
+docker exec cassandra-dev cqlsh -e "DESCRIBE KEYSPACES"
+```
+Don't start/redeploy Jetty until that command succeeds - `CassandraLifecycleListener` connects and creates the
+keyspace/table on webapp startup, so it needs the node to already be accepting connections.
+
+Start Jetty Server:
+```bash
+./gradlew startJetty
+```
+
+Then navigate to `http://localhost:8080/FinanceBudge/cassandra/console`.
+This is a page for demo-ing Cassandra.
+
+The `events` table is keyed by `(source, created_at)`: `source` is the **partition key** (decides which node(s)
+own the row - with a 1-node cluster that's moot, but it's the same design you'd use on a real cluster), and
+`created_at` is a **clustering column** (sorts rows within a partition, newest first). Submitting the "Insert"
+form POSTs to `/cassandra/events`. Searching only takes a `source`, not a free-text query - `/cassandra/events/search`
+requires it and returns every row under that partition, already sorted - that's deliberate: Cassandra can only
+serve lookups efficiently by partition key, there's no general cross-field filtering the way SQL has.
+
+You can override the connection with the `CASSANDRA_HOST` / `CASSANDRA_PORT` / `CASSANDRA_DATACENTER` env vars
+(see `CassandraConfig`) - the defaults match the official Cassandra image's out-of-the-box single-node config.
+

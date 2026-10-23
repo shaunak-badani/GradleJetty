@@ -20,6 +20,12 @@ dependencies {
     implementation 'org.opensearch.client:opensearch-java:2.25.0'
     implementation 'org.apache.httpcomponents.client5:httpclient5:5.5.2'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.4'
+
+    // Kafka client (producer + consumer), ships inside the WAR same as the OpenSearch client above.
+    implementation 'org.apache.kafka:kafka-clients:3.9.0'
+
+    // Cassandra (DataStax/Apache) Java driver, ships inside the WAR same as the clients above.
+    implementation 'com.datastax.oss:java-driver-core:4.17.0'
 }
 
 war {
