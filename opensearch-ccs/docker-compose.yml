@@ -1,0 +1,31 @@
+services:
+  cluster-a:
+    image: opensearchproject/opensearch:2.19.0
+    container_name: cluster-a
+    environment:
+      - cluster.name=cluster-a
+      - node.name=cluster-a-node1
+      - discovery.type=single-node
+      - "DISABLE_SECURITY_PLUGIN=true"
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9206:9200"
+    networks:
+      - ccs-net
+
+  cluster-b:
+    image: opensearchproject/opensearch:2.19.0
+    container_name: cluster-b
+    environment:
+      - cluster.name=cluster-b
+      - node.name=cluster-b-node1
+      - discovery.type=single-node
+      - "DISABLE_SECURITY_PLUGIN=true"
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9207:9200"
+    networks:
+      - ccs-net
+
+networks:
+  ccs-net:

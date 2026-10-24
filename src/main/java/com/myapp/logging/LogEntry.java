@@ -13,6 +13,7 @@ public class LogEntry {
     private String level;
     private String message;
     private String source;
+    private String cluster;
 
     public LogEntry() {
     }
@@ -54,5 +55,17 @@ public class LogEntry {
 
     public void setSource(String source) {
         this.source = source;
+    }
+
+    /**
+     * On a write (POST /logs): which cluster to write into - "local" (default) or
+     * CrossClusterConfig.ALIAS. On a cross-cluster search result: which cluster the hit came from.
+     */
+    public String getCluster() {
+        return cluster;
+    }
+
+    public void setCluster(String cluster) {
+        this.cluster = cluster;
     }
 }

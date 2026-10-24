@@ -11,8 +11,9 @@ import java.io.IOException;
  * GET /console
  *
  * Serves the log console page: a form that POSTs to LogIngestServlet ("/logs")
- * and a search bar that GETs LogSearchServlet ("/logs/search"). The page itself
- * is just a servlet writing HTML, same as HelloServlet - no static files.
+ * and a search bar that GETs LogSearchServlet ("/logs/search") or, when the
+ * cross-cluster checkbox is on, LogSearchCrossClusterServlet ("/logs/search/ccs").
+ * The page itself is just a servlet writing HTML, same as HelloServlet - no static files.
  */
 @WebServlet("/console")
 public class LogConsoleServlet extends HttpServlet {
@@ -70,6 +71,13 @@ public class LogConsoleServlet extends HttpServlet {
                             <label for="source">Source</label>
                             <input type="text" id="source" name="source" placeholder="checkout-service" required>
                         </div>
+                        <div class="field">
+                            <label for="target-cluster">Target cluster</label>
+                            <select id="target-cluster" name="cluster">
+                                <option value="local" selected>local (file &rarr; Logstash)</option>
+                                <option value="cluster-b">cluster-b (direct index, no file/Logstash)</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="field">
                         <label for="message">Message</label>
@@ -86,6 +94,12 @@ public class LogConsoleServlet extends HttpServlet {
                     <input type="text" id="query" name="q" placeholder="Search message text, e.g. checkout" required>
                     <button type="submit">Search</button>
                 </form>
+                <div class="field" style="margin-top: 0.75rem;">
+                    <label style="display: inline-flex; align-items: center; gap: 0.4rem; margin-bottom: 0;">
+                        <input type="checkbox" id="ccs-toggle">
+                        Also search cluster-b (cross-cluster search &rarr; GET /logs/search/ccs?q=...)
+                    </label>
+                </div>
                 <div id="search-status" class="status"></div>
                 <div id="results"></div>
             </section>
@@ -107,10 +121,12 @@ public class LogConsoleServlet extends HttpServlet {
                     event.preventDefault();
                     const button = logForm.querySelector('button');
                     button.disabled = true;
+                    const targetCluster = document.getElementById('target-cluster').value;
                     const payload = {
                         level: document.getElementById('level').value,
                         source: document.getElementById('source').value,
-                        message: document.getElementById('message').value
+                        message: document.getElementById('message').value,
+                        cluster: targetCluster
                     };
                     try {
                         const resp = await fetch('logs', {
@@ -120,7 +136,10 @@ public class LogConsoleServlet extends HttpServlet {
                         });
                         const text = await resp.text();
                         if (!resp.ok) throw new Error('HTTP ' + resp.status + ': ' + text);
-                        showStatus(logStatus, 'Written to log file -> ' + text.trim() + ' (Logstash will index it shortly)', false);
+                        const statusMessage = targetCluster === 'local'
+                            ? 'Written to log file -> ' + text.trim() + ' (Logstash will index it shortly)'
+                            : 'Indexed directly into ' + targetCluster + ' -> ' + text.trim() + ' (no file, no Logstash)';
+                        showStatus(logStatus, statusMessage, false);
                         document.getElementById('message').value = '';
                     } catch (err) {
                         showStatus(logStatus, 'Failed to submit log: ' + err.message, true);
@@ -129,18 +148,22 @@ public class LogConsoleServlet extends HttpServlet {
                     }
                 });
 
+                const ccsToggle = document.getElementById('ccs-toggle');
+
                 searchForm.addEventListener('submit', async (event) => {
                     event.preventDefault();
                     const button = searchForm.querySelector('button');
                     button.disabled = true;
                     resultsEl.innerHTML = '';
                     const q = document.getElementById('query').value;
+                    const crossCluster = ccsToggle.checked;
+                    const endpoint = crossCluster ? 'logs/search/ccs' : 'logs/search';
                     try {
-                        const resp = await fetch('logs/search?q=' + encodeURIComponent(q));
+                        const resp = await fetch(endpoint + '?q=' + encodeURIComponent(q));
                         const text = await resp.text();
                         if (!resp.ok) throw new Error('HTTP ' + resp.status + ': ' + text);
                         searchStatus.textContent = '';
-                        renderResults(JSON.parse(text));
+                        renderResults(JSON.parse(text), crossCluster);
                     } catch (err) {
                         showStatus(searchStatus, 'Search failed: ' + err.message, true);
                     } finally {
@@ -148,22 +171,24 @@ public class LogConsoleServlet extends HttpServlet {
                     }
                 });
 
-                function renderResults(hits) {
+                function renderResults(hits, showCluster) {
                     if (!hits || hits.length === 0) {
                         resultsEl.innerHTML = '<p>No matching log entries.</p>';
                         return;
                     }
+                    const clusterHeader = showCluster ? '<th>Cluster</th>' : '';
                     const rows = hits.map((hit) => `
                         <tr>
                             <td>${escapeHtml(hit.timestamp || '')}</td>
                             <td>${escapeHtml(hit.level || '')}</td>
                             <td>${escapeHtml(hit.message || '')}</td>
                             <td>${escapeHtml(hit.source || '')}</td>
+                            ${showCluster ? `<td>${escapeHtml(hit.cluster || 'local')}</td>` : ''}
                         </tr>
                     `).join('');
                     resultsEl.innerHTML = `
                         <table>
-                            <thead><tr><th>Timestamp</th><th>Level</th><th>Message</th><th>Source</th></tr></thead>
+                            <thead><tr><th>Timestamp</th><th>Level</th><th>Message</th><th>Source</th>${clusterHeader}</tr></thead>
                             <tbody>${rows}</tbody>
                         </table>
                     `;
